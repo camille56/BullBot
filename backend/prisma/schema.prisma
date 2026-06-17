@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SignalType {
+  BUY
+  SELL
+  HOLD
+}
+
+enum TradeMode {
+  BACKTEST
+  LIVE
+}
+
+model Candle {
+  id        String   @id @default(uuid())
+  timestamp DateTime
+  open      Decimal
+  high      Decimal
+  low       Decimal
+  close     Decimal
+  volume    Decimal
+  interval  String
+  source    String
+
+  @@unique([timestamp, interval, source])
+}
+
+model Strategy {
+  id      String @id @default(uuid())
+  name    String
+  params  Json
+  version Int
+
+  signals      Signal[]
+  backtestRuns BacktestRun[]
+}
+
+model Signal {
+  id         String     @id @default(uuid())
+  timestamp  DateTime
+  type       SignalType
+  price      Decimal
+  confidence Decimal
+
+  strategyId String
+  strategy   Strategy @relation(fields: [strategyId], references: [id])
+  trades     Trade[]
+}
+
+model Trade {
+  id             String     @id @default(uuid())
+  timestamp      DateTime
+  type           SignalType
+  executionPrice Decimal
+  quantity       Decimal
+  mode           TradeMode
+
+  signalId String?
+  signal   Signal? @relation(fields: [signalId], references: [id])
+}
+
+model Position {
+  id            String    @id @default(uuid())
+  quantity      Decimal
+  avgEntryPrice Decimal
+  unrealizedPnl Decimal
+  openedAt      DateTime
+  closedAt      DateTime?
+}
+
+model BacktestRun {
+  id             String   @id @default(uuid())
+  periodStart    DateTime
+  periodEnd      DateTime
+  initialCapital Decimal
+  finalPnl       Decimal
+  maxDrawdown    Decimal
+  tradeCount     Int
+  createdAt      DateTime @default(now())
+
+  strategyId String
+  strategy   Strategy @relation(fields: [strategyId], references: [id])
+}
