@@ -19,7 +19,7 @@ interface EvaluateSignalParams {
   takeProfit: number;
 }
 
-type RejectionReason = 'CONFIDENCE_BELOW_THRESHOLD' | 'POSITION_ALREADY_OPEN' | 'NET_RATIO_BELOW_THRESHOLD';
+export type RejectionReason = 'CONFIDENCE_BELOW_THRESHOLD' | 'POSITION_ALREADY_OPEN' | 'NET_RATIO_BELOW_THRESHOLD';
 
 interface RejectedSignal {
   accepted: false;

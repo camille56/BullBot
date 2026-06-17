@@ -1,11 +1,9 @@
-import { generateSMASignal } from '../strategy-engine/sma';
-import type { PricePoint } from '../strategy-engine/types';
 import { TradingEngine } from '../trading-engine/trading-engine';
 import type { TradingEngineConfig } from '../trading-engine/trading-engine';
-import { computeStopLoss, computeTakeProfit } from '../trading-engine/risk-levels';
 import type { RiskLevelsConfig } from '../trading-engine/risk-levels';
 import { portfolioValue } from '../trading-engine/portfolio';
 import type { RawCandle as Candle } from '../historical-data-fetcher/types';
+import { processCandle } from './process-candle';
 
 export interface BacktestConfig {
   smaShortPeriod: number;
@@ -55,43 +53,21 @@ export function runBacktest(candles: Candle[], config: BacktestConfig): Backtest
 
     if (i + 1 >= minHistory) {
       const candleWindow = candles.slice(0, i + 1);
+      const event = processCandle(engine, candleWindow, config);
 
-      if (engine.portfolio.position === null) {
-        const pricePoints: PricePoint[] = candleWindow.map((c) => ({ price: c.close, timestamp: c.timestamp }));
-        const signal = generateSMASignal(pricePoints, {
-          shortPeriod: config.smaShortPeriod,
-          longPeriod: config.smaLongPeriod,
+      if (event?.type === 'OPENED') {
+        pendingEntry = { timestamp: event.timestamp, price: event.entryPrice };
+      } else if (event?.type === 'CLOSED' && pendingEntry) {
+        trades.push({
+          entryTimestamp: pendingEntry.timestamp,
+          entryPrice: pendingEntry.price,
+          exitTimestamp: event.timestamp,
+          exitPrice: event.exitPrice,
+          quantity: event.quantity,
+          reason: event.reason,
+          pnl: (event.exitPrice - pendingEntry.price) * event.quantity,
         });
-
-        if (signal.type === 'BUY') {
-          const stopLoss = computeStopLoss(candleWindow, config.riskLevels);
-          const takeProfit = computeTakeProfit(candleWindow, config.riskLevels);
-          const decision = engine.evaluateSignal({
-            signal: { confidence: signal.confidence, price: signal.price },
-            stopLoss,
-            takeProfit,
-          });
-
-          if (decision.accepted) {
-            pendingEntry = { timestamp: currentCandle.timestamp, price: decision.entryPrice };
-          }
-        }
-      } else {
-        const candidateStopLoss = computeStopLoss(candleWindow, config.riskLevels);
-        const closed = engine.evaluatePriceUpdate(currentCandle.close, candidateStopLoss);
-
-        if (closed && pendingEntry) {
-          trades.push({
-            entryTimestamp: pendingEntry.timestamp,
-            entryPrice: pendingEntry.price,
-            exitTimestamp: currentCandle.timestamp,
-            exitPrice: closed.exitPrice,
-            quantity: closed.quantity,
-            reason: closed.reason,
-            pnl: (closed.exitPrice - pendingEntry.price) * closed.quantity,
-          });
-          pendingEntry = null;
-        }
+        pendingEntry = null;
       }
     }
 

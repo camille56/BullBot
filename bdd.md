@@ -595,3 +595,39 @@ Alors le trade est ouvert puis clôturé (stop-loss ou take-profit), et le résu
 Étant donné le résultat d'un backtest et l'identifiant d'une stratégie existante
 Quand la sauvegarde est demandée
 Alors un enregistrement `BacktestRun` est créé en base avec les valeurs du résultat
+
+## Market Data Provider (live)
+
+### LiveTradingSession (`market-data-provider/live-trading-session.ts`, PriceFeed mocké)
+
+**Historique insuffisant**
+Étant donné moins de bougies reçues que l'historique minimal requis par la stratégie et les niveaux de risque
+Quand de nouvelles bougies arrivent via le PriceFeed
+Alors aucun événement n'est émis et aucune position n'est ouverte
+
+**Interchangeabilité avec le Backtest Runner**
+Étant donné le même scénario de marché (tendance haussière) rejoué bougie par bougie via un PriceFeed plutôt qu'en une seule passe sur un tableau
+Quand chaque bougie est reçue
+Alors le même Strategy Engine et le même Trading Engine produisent l'ouverture puis la clôture de la position, avec le même résultat final sur le portefeuille
+
+### BinanceMarketDataProvider (`market-data-provider/binance-market-data-provider.ts`, réseau mocké)
+
+**Bougie clôturée**
+Étant donné un message WebSocket kline avec `k.x = true` (bougie clôturée)
+Quand le message est reçu
+Alors il est normalisé en `RawCandle` (timestamp, OHLCV) et transmis à tous les abonnés `onPrice`
+
+**Bougie non clôturée**
+Étant donné un message WebSocket kline avec `k.x = false` (bougie en cours)
+Quand le message est reçu
+Alors aucun abonné n'est notifié
+
+**Message non-kline**
+Étant donné un message WebSocket qui n'est pas un événement `kline` (ex: `aggTrade`)
+Quand le message est reçu
+Alors aucun abonné n'est notifié
+
+**Abonnement au flux**
+Étant donné un symbole et un intervalle configurés
+Quand `subscribe()` est appelé
+Alors le client WebSocket s'abonne au topic kline correspondant (`{symbol}@kline_{interval}`) sur la connexion `main`
