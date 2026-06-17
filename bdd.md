@@ -503,3 +503,95 @@ Alors seules les dates manquantes sont téléchargées
 Étant donné une période totalement absente de la base
 Quand le téléchargement de la période est demandé
 Alors chaque date est téléchargée, parsée puis sauvegardée
+
+## Backtest Runner
+
+### Portfolio (`trading-engine/portfolio.ts`)
+
+**Ouverture de position**
+Étant donné un portefeuille sans position ouverte et un cash suffisant
+Quand l'ouverture d'une position est demandée
+Alors le cash est débité du coût (prix × quantité) et la position est créée
+
+**Ouverture refusée**
+Étant donné une position déjà ouverte, ou un cash insuffisant pour le coût demandé
+Quand l'ouverture d'une position est demandée
+Alors une erreur est levée
+
+**Clôture de position**
+Étant donné une position ouverte
+Quand la clôture au prix de sortie est demandée
+Alors le cash est crédité du produit de la vente et la position est vidée
+
+**Valeur du portefeuille**
+Étant donné un portefeuille avec ou sans position ouverte
+Quand la valeur totale au prix courant est demandée
+Alors le cash plus la valeur de marché de la position (le cas échéant) est retournée
+
+### computeStopLoss / computeTakeProfit (`trading-engine/risk-levels.ts`)
+
+**Combinaison la plus prudente**
+Étant donné une série de bougies où le support (ou la résistance) détecté est plus proche du prix que le niveau ATR (ou Bollinger)
+Quand le calcul du stop-loss (ou du take-profit) est demandé
+Alors le niveau le plus proche du prix est retenu
+
+**Absence de support/résistance**
+Étant donné une série de bougies sans support ou résistance détectable
+Quand le calcul du stop-loss (ou du take-profit) est demandé
+Alors le niveau ATR (ou Bollinger) seul est retourné
+
+**Historique insuffisant**
+Étant donné une série de bougies plus courte que la période ATR ou Bollinger configurée
+Quand le calcul du stop-loss ou du take-profit est demandé
+Alors une erreur explicite est levée
+
+### TradingEngine (`trading-engine/trading-engine.ts`, coquille à état)
+
+**Refus en cascade**
+Étant donné un signal sous le seuil de confiance, ou une position déjà ouverte, ou un ratio net insuffisant
+Quand l'évaluation du signal est demandée
+Alors le signal est refusé avec la raison correspondante, dans l'ordre de vérification du document de risque/récompense
+
+**Acceptation et ouverture**
+Étant donné un signal valide (confiance suffisante, aucune position ouverte, ratio net suffisant)
+Quand l'évaluation du signal est demandée
+Alors une position est ouverte, dimensionnée selon la confiance entre la taille minimale et maximale configurées
+
+**Sortie sur stop-loss ou take-profit**
+Étant donné une position ouverte et un prix courant atteignant le stop-loss ou le take-profit
+Quand la mise à jour de prix est évaluée
+Alors la position est clôturée au niveau touché, avec la raison de sortie correspondante
+
+**Trailing stop**
+Étant donné une position ouverte ayant atteint le seuil d'activation du trailing
+Quand la mise à jour de prix est évaluée avec un nouveau niveau de stop-loss candidat plus favorable
+Alors le stop-loss de la position est relevé, sans jamais redescendre, et la position reste ouverte
+
+### runBacktest (`backtest-runner/backtest-runner.ts`)
+
+**Série vide**
+Étant donné une série de bougies vide
+Quand le backtest est lancé
+Alors une erreur est levée
+
+**Marché plat**
+Étant donné un marché sans croisement de moyennes mobiles
+Quand le backtest est lancé
+Alors aucun trade n'est pris, le P&L final et le drawdown max sont nuls
+
+**Historique insuffisant**
+Étant donné une série de bougies plus courte que l'historique minimal requis par la stratégie et les niveaux de risque
+Quand le backtest est lancé
+Alors aucun trade n'est pris, sans erreur levée
+
+**Tendance haussière soutenue**
+Étant donné une tendance haussière produisant un croisement SMA accepté par le Trading Engine
+Quand le backtest est lancé
+Alors le trade est ouvert puis clôturé (stop-loss ou take-profit), et le résultat (P&L final, drawdown max, nombre de trades) est cohérent avec l'historique des trades
+
+### PrismaBacktestRunRepository (`backtest-runner/backtest-run-repository.ts`, intégration)
+
+**Persistance d'un résultat de backtest**
+Étant donné le résultat d'un backtest et l'identifiant d'une stratégie existante
+Quand la sauvegarde est demandée
+Alors un enregistrement `BacktestRun` est créé en base avec les valeurs du résultat
