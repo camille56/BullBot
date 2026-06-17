@@ -5,8 +5,12 @@ Bot de trading automatique en paper trading sur BTC/USDT (Binance Spot), combina
 ## Language
 
 **Signal** (`StrategySignal`):
-Résultat produit par un indicateur technique pour l'instant présent : un type (`BUY`/`SELL`/`HOLD`), un score de confiance, un prix et un timestamp. Toujours calculé pour le dernier prix reçu, jamais pour toute une série historique d'un coup — c'est ce qui permet au même code de tourner en backtest et en live.
+Résultat produit par un indicateur technique pour l'instant présent : un type (`BUY`/`SELL`/`HOLD`), un score de confiance, un prix et un timestamp. Toujours calculé pour le dernier prix reçu, jamais pour toute une série historique d'un coup — c'est ce qui permet au même code de tourner en backtest et en live. Le prix et le timestamp du signal sont ceux du dernier `PricePoint` reçu.
 _Avoid_: alerte, recommandation
+
+**PricePoint**:
+Un prix daté : `{ price: number; timestamp: number }`. C'est l'unité que transmet `PriceFeed.onPrice(callback)`, et donc ce que reçoivent les fonctions de génération de signal (`generateSMASignal`, etc.) — par opposition aux fonctions de calcul pur comme `calculateSMA`, qui n'ont besoin que de nombres bruts.
+_Avoid_: candle/bougie (plus riche : OHLCV — un PricePoint n'a qu'un seul prix, pas open/high/low/close)
 
 **Score de confiance** (`confidence`):
 Valeur entre 0 et 1 indiquant la fiabilité d'un signal. Calculé par un indicateur isolé, il ne reflète que la force de ce signal (ex: écart entre deux moyennes mobiles au moment du croisement) — il ne tient pas compte des autres indicateurs ni de la volatilité. Ces facteurs n'interviennent qu'au niveau de la confirmation croisée.
