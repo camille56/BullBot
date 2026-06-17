@@ -44,4 +44,30 @@ describe('PrismaBacktestRunRepository (intégration, nécessite Postgres local v
     expect(rows[0].finalPnl.toString()).toBe('250.5');
     expect(rows[0].tradeCount).toBe(3);
   });
+
+  it('retrouve une page de backtest runs triée par date décroissante, avec le total', async () => {
+    const baseResult: BacktestResult = {
+      periodStart: Date.parse('2024-01-01T00:00:00.000Z'),
+      periodEnd: Date.parse('2024-01-31T00:00:00.000Z'),
+      initialCapital: 10_000,
+      finalPnl: 100,
+      maxDrawdown: 0.05,
+      tradeCount: 1,
+      trades: [],
+    };
+
+    await repository.save(baseResult, strategyId);
+    await repository.save({ ...baseResult, finalPnl: 200 }, strategyId);
+
+    const page = await repository.findPage(1, 1);
+
+    expect(page.total).toBe(2);
+    expect(page.runs).toHaveLength(1);
+    expect(page.runs[0].finalPnl).toBe(200);
+  });
+
+  it('lève une erreur explicite pour des paramètres de pagination invalides', async () => {
+    await expect(repository.findPage(0, 10)).rejects.toThrow();
+    await expect(repository.findPage(1, 0)).rejects.toThrow();
+  });
 });

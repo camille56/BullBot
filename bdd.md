@@ -631,3 +631,125 @@ Alors aucun abonné n'est notifié
 Étant donné un symbole et un intervalle configurés
 Quand `subscribe()` est appelé
 Alors le client WebSocket s'abonne au topic kline correspondant (`{symbol}@kline_{interval}`) sur la connexion `main`
+
+## API Backend + WebSocket
+
+### parsePagination (`api/pagination.ts`)
+
+**Valeurs par défaut**
+Étant donné une requête sans paramètres de pagination
+Quand le parsing est demandé
+Alors page=1 et pageSize=20 sont retournés
+
+**Paramètres invalides**
+Étant donné une page négative, nulle, non numérique, ou un pageSize hors bornes (0 ou > 100)
+Quand le parsing est demandé
+Alors `null` est retourné
+
+### GET /api/trades (`api/routes/trades.ts`)
+
+**Liste paginée**
+Étant donné des trades existants en base
+Quand la liste est demandée
+Alors un statut 200 et la page de trades (avec le total) sont retournés, en transmettant page/pageSize au repository
+
+**Pagination invalide**
+Étant donné des paramètres de pagination invalides (ex: `page=-1`)
+Quand la liste est demandée
+Alors un statut 400 est retourné
+
+### GET /api/strategies (`api/routes/strategies.ts`)
+
+**Liste des stratégies configurées**
+Étant donné des stratégies existantes en base
+Quand la liste est demandée
+Alors un statut 200 et la liste complète (nom, paramètres, version) sont retournés
+
+### GET /api/backtests (`api/routes/backtests.ts`)
+
+**Liste paginée**
+Étant donné des backtests déjà exécutés
+Quand la liste est demandée
+Alors un statut 200 et la page de résultats (avec le total) sont retournés
+
+**Pagination invalide**
+Étant donné des paramètres de pagination invalides
+Quand la liste est demandée
+Alors un statut 400 est retourné
+
+### POST /api/backtests (`api/routes/backtests.ts`)
+
+**Déclenchement réussi**
+Étant donné une période pour laquelle des bougies existent en base, et une configuration complète (stratégie, niveaux de risque, Trading Engine)
+Quand le backtest est déclenché
+Alors la stratégie est retrouvée ou créée, le backtest est exécuté via `runBacktest`, les trades et le résultat sont persistés, et un statut 201 avec le résultat est retourné
+
+**Champ requis manquant**
+Étant donné un corps de requête auquel il manque un champ requis (stratégie, période, niveaux de risque, etc.)
+Quand le backtest est déclenché
+Alors un statut 400 est retourné, sans appel au repository
+
+**Aucune bougie disponible**
+Étant donné une période pour laquelle aucune bougie n'existe en base
+Quand le backtest est déclenché
+Alors un statut 400 est retourné, sans exécuter le backtest
+
+### CandleRepository.findCandlesInRange (`historical-data-fetcher/candle-repository.ts`)
+
+**Lecture d'une période**
+Étant donné des bougies sauvegardées à différentes dates
+Quand les bougies d'une période sont demandées
+Alors seules celles comprises dans la période sont retournées, triées par timestamp croissant
+
+### TradeRepository (`backtest-runner/trade-repository.ts`)
+
+**Persistance d'un BacktestTrade**
+Étant donné un trade de backtest (entrée + sortie)
+Quand la sauvegarde est demandée
+Alors deux lignes `Trade` sont créées (BUY à l'entrée, SELL à la sortie), avec le mode `BACKTEST`
+
+**Lecture paginée**
+Étant donné des trades existants
+Quand une page est demandée
+Alors les trades sont retournés triés par timestamp décroissant, avec le total
+
+**Pagination invalide**
+Étant donné une page ou un pageSize non strictement positifs
+Quand une page est demandée
+Alors une erreur est levée
+
+### BacktestRunRepository.findPage (`backtest-runner/backtest-run-repository.ts`)
+
+**Lecture paginée**
+Étant donné plusieurs backtests sauvegardés
+Quand une page est demandée
+Alors les runs sont retournés triés par date de création décroissante, avec le total
+
+**Pagination invalide**
+Étant donné une page ou un pageSize non strictement positifs
+Quand une page est demandée
+Alors une erreur est levée
+
+### StrategyRepository (`strategy-engine/strategy-repository.ts`)
+
+**Création puis lecture**
+Étant donné une nouvelle stratégie (nom, paramètres)
+Quand `findOrCreateByName` est appelé puis `findAll`
+Alors la stratégie créée apparaît dans la liste complète
+
+**Pas de doublon**
+Étant donné une stratégie déjà créée par son nom
+Quand `findOrCreateByName` est appelé à nouveau avec le même nom
+Alors la même stratégie est retournée, sans création d'un second enregistrement
+
+### WebSocketBroadcaster (`api/websocket-broadcaster.ts`)
+
+**Diffusion à tous les clients**
+Étant donné plusieurs clients WebSocket connectés
+Quand un message est diffusé
+Alors chaque client connecté reçoit le même message JSON
+
+**Aucun client connecté**
+Étant donné aucun client connecté
+Quand un message est diffusé
+Alors aucune erreur n'est levée

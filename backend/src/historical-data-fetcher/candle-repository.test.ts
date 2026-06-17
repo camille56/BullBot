@@ -42,4 +42,24 @@ describe('PrismaCandleRepository (intégration, nécessite Postgres local via do
     const count = await prisma.candle.count({ where: { interval: TEST_INTERVAL } });
     expect(count).toBe(1);
   });
+
+  it('retrouve les bougies d\'une période, triées par timestamp croissant', async () => {
+    await repository.saveCandles(
+      [
+        { timestamp: Date.parse('2024-01-03T00:00:00.000Z'), open: 3, high: 3, low: 3, close: 3, volume: 1 },
+        { timestamp: Date.parse('2024-01-01T00:00:00.000Z'), open: 1, high: 1, low: 1, close: 1, volume: 1 },
+        { timestamp: Date.parse('2024-01-02T00:00:00.000Z'), open: 2, high: 2, low: 2, close: 2, volume: 1 },
+        { timestamp: Date.parse('2024-01-10T00:00:00.000Z'), open: 10, high: 10, low: 10, close: 10, volume: 1 },
+      ],
+      TEST_INTERVAL
+    );
+
+    const candles = await repository.findCandlesInRange(
+      TEST_INTERVAL,
+      Date.parse('2024-01-01T00:00:00.000Z'),
+      Date.parse('2024-01-03T00:00:00.000Z')
+    );
+
+    expect(candles.map((c) => c.close)).toEqual([1, 2, 3]);
+  });
 });

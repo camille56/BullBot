@@ -12,6 +12,7 @@ function createMockCandleRepository(coveredDates: string[] = []): CandleReposito
   return {
     getCoveredDates: vi.fn().mockResolvedValue(new Set(coveredDates)),
     saveCandles: vi.fn().mockResolvedValue(undefined),
+    findCandlesInRange: vi.fn().mockResolvedValue([]),
   };
 }
 

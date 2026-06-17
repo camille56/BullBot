@@ -4,6 +4,7 @@ import type { RawCandle } from './types';
 export interface CandleRepository {
   getCoveredDates(interval: string): Promise<Set<string>>;
   saveCandles(candles: RawCandle[], interval: string): Promise<void>;
+  findCandlesInRange(interval: string, start: number, end: number): Promise<RawCandle[]>;
 }
 
 export class PrismaCandleRepository implements CandleRepository {
@@ -36,5 +37,21 @@ export class PrismaCandleRepository implements CandleRepository {
       })),
       skipDuplicates: true,
     });
+  }
+
+  async findCandlesInRange(interval: string, start: number, end: number): Promise<RawCandle[]> {
+    const rows = await this.prisma.candle.findMany({
+      where: { interval, timestamp: { gte: new Date(start), lte: new Date(end) } },
+      orderBy: { timestamp: 'asc' },
+    });
+
+    return rows.map((row) => ({
+      timestamp: row.timestamp.getTime(),
+      open: Number(row.open),
+      high: Number(row.high),
+      low: Number(row.low),
+      close: Number(row.close),
+      volume: Number(row.volume),
+    }));
   }
 }
