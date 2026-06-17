@@ -404,3 +404,102 @@ Alors la sortie partielle est déclenchée (le niveau atteint compte comme franc
 Étant donné une sortie partielle déjà effectuée pour cette position
 Quand l'évaluation de la sortie partielle est demandée
 Alors aucune nouvelle sortie n'est déclenchée, même si le prix dépasse à nouveau le niveau du palier
+
+## Historical Data Fetcher
+
+### parseKlinesArchive (`historical-data-fetcher/klines-parser.ts`)
+
+**Fichier CSV valide**
+Étant donné un fichier CSV de klines au format Binance (sans en-tête, 12 colonnes)
+Quand le parsing de l'archive est demandé
+Alors un tableau de bougies (timestamp, open, high, low, close, volume) est retourné
+
+**Lignes malformées**
+Étant donné une ligne avec un nombre de colonnes incorrect, ou avec le bon nombre de colonnes mais des valeurs non numériques
+Quand le parsing de l'archive est demandé
+Alors la ligne est ignorée sans que le parsing des autres lignes ne soit interrompu
+
+**Lignes vides**
+Étant donné des lignes vides dans le fichier CSV
+Quand le parsing de l'archive est demandé
+Alors elles sont ignorées sans erreur
+
+**Entrée vide**
+Étant donné un contenu CSV vide
+Quand le parsing de l'archive est demandé
+Alors un tableau vide est retourné
+
+### buildDailyKlineUrl / enumerateDailyDates (`historical-data-fetcher/klines-url.ts`)
+
+**Construction de l'URL d'archive**
+Étant donné un symbole, un intervalle et une date
+Quand la construction de l'URL d'archive journalière est demandée
+Alors l'URL au format `data.binance.vision` est retournée
+
+**Énumération sur une période**
+Étant donné une date de début et une date de fin
+Quand l'énumération des dates journalières est demandée
+Alors toutes les dates comprises entre les deux bornes (incluses) sont retournées, y compris à travers un changement de mois
+
+**Bornes inversées**
+Étant donné une date de début postérieure à la date de fin
+Quand l'énumération des dates journalières est demandée
+Alors une erreur est levée
+
+### filterMissingDates (`historical-data-fetcher/missing-ranges.ts`)
+
+**Couverture partielle**
+Étant donné une liste de dates demandées et un ensemble de dates déjà couvertes en base
+Quand le filtrage des dates manquantes est demandé
+Alors seules les dates absentes de la couverture existante sont retournées
+
+**Couverture totale ou nulle**
+Étant donné une couverture totale, ou l'absence totale de couverture
+Quand le filtrage des dates manquantes est demandé
+Alors respectivement aucune date, ou toutes les dates demandées, sont retournées
+
+### BinanceVisionHttpClient (`historical-data-fetcher/http-client.ts`)
+
+**Téléchargement et extraction réussis**
+Étant donné une réponse HTTP OK contenant une archive ZIP avec un fichier CSV
+Quand le téléchargement de l'URL est demandé
+Alors le contenu CSV extrait de l'archive est retourné
+
+**Réponse HTTP en erreur**
+Étant donné une réponse HTTP non OK (ex: archive inexistante, 404)
+Quand le téléchargement de l'URL est demandé
+Alors une erreur explicite mentionnant le code HTTP est levée
+
+### PrismaCandleRepository (`historical-data-fetcher/candle-repository.ts`, intégration)
+
+**Aucune donnée**
+Étant donné aucune bougie sauvegardée pour un intervalle donné
+Quand les dates couvertes sont demandées
+Alors un ensemble vide est retourné
+
+**Sauvegarde puis lecture**
+Étant donné des bougies sauvegardées pour une date donnée
+Quand les dates couvertes sont demandées
+Alors cette date apparaît dans l'ensemble retourné
+
+**Doublons**
+Étant donné une bougie déjà sauvegardée (même timestamp/intervalle/source)
+Quand la même bougie est sauvegardée à nouveau
+Alors elle n'est pas dupliquée en base, sans erreur levée
+
+### HistoricalDataFetcher.fetchRange (`historical-data-fetcher/historical-data-fetcher.ts`, réseau mocké)
+
+**Période déjà entièrement couverte**
+Étant donné une période déjà entièrement présente en base
+Quand le téléchargement de la période est demandé
+Alors aucune requête réseau n'est effectuée et aucune bougie n'est sauvegardée
+
+**Période partiellement couverte**
+Étant donné une période partiellement présente en base
+Quand le téléchargement de la période est demandé
+Alors seules les dates manquantes sont téléchargées
+
+**Aucune couverture**
+Étant donné une période totalement absente de la base
+Quand le téléchargement de la période est demandé
+Alors chaque date est téléchargée, parsée puis sauvegardée
