@@ -22,6 +22,7 @@ function createDeps(overrides: Partial<AppDeps> = {}): AppDeps {
       saveCandles: vi.fn(),
       findCandlesInRange: vi.fn().mockResolvedValue([]),
     },
+    portfolioProvider: { portfolio: { cashBalance: 10_000, position: null } },
     ...overrides,
   };
 }

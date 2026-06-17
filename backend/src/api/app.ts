@@ -7,12 +7,15 @@ import type { CandleRepository } from '../historical-data-fetcher/candle-reposit
 import { createTradesRouter } from './routes/trades';
 import { createStrategiesRouter } from './routes/strategies';
 import { createBacktestsRouter } from './routes/backtests';
+import { createPortfolioRouter } from './routes/portfolio';
+import type { PortfolioProvider } from './routes/portfolio';
 
 export interface AppDeps {
   tradeRepository: TradeRepository;
   backtestRunRepository: BacktestRunRepository;
   strategyRepository: StrategyRepository;
   candleRepository: CandleRepository;
+  portfolioProvider: PortfolioProvider;
 }
 
 export function createApp(deps: AppDeps): Express {
@@ -22,6 +25,7 @@ export function createApp(deps: AppDeps): Express {
   app.use('/api/trades', createTradesRouter(deps.tradeRepository));
   app.use('/api/strategies', createStrategiesRouter(deps.strategyRepository));
   app.use('/api/backtests', createBacktestsRouter(deps));
+  app.use('/api/portfolio', createPortfolioRouter(deps.portfolioProvider));
 
   return app;
 }

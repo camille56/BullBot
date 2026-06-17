@@ -32,6 +32,7 @@ function createDeps(overrides: Partial<AppDeps> = {}): AppDeps {
       findOrCreateByName: vi.fn().mockResolvedValue({ id: 'strategy-1', name: 'SMA', params: {}, version: 1 }),
     },
     candleRepository: { getCoveredDates: vi.fn(), saveCandles: vi.fn(), findCandlesInRange: vi.fn().mockResolvedValue([]) },
+    portfolioProvider: { portfolio: { cashBalance: 10_000, position: null } },
     ...overrides,
   };
 }

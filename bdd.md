@@ -665,6 +665,18 @@ Alors un statut 400 est retourné
 Quand la liste est demandée
 Alors un statut 200 et la liste complète (nom, paramètres, version) sont retournés
 
+### GET /api/portfolio (`api/routes/portfolio.ts`)
+
+**Aucune position ouverte**
+Étant donné un portefeuille sans position ouverte
+Quand le portefeuille courant est demandé
+Alors un statut 200 et `{ cashBalance, position: null }` sont retournés
+
+**Position ouverte**
+Étant donné un portefeuille avec une position ouverte
+Quand le portefeuille courant est demandé
+Alors la position (quantité, prix d'entrée, stop-loss, take-profit) est incluse dans la réponse
+
 ### GET /api/backtests (`api/routes/backtests.ts`)
 
 **Liste paginée**

@@ -9,6 +9,7 @@ function createDeps(overrides: Partial<AppDeps> = {}): AppDeps {
     backtestRunRepository: { save: vi.fn(), findPage: vi.fn() },
     strategyRepository: { findAll: vi.fn().mockResolvedValue([]), findOrCreateByName: vi.fn() },
     candleRepository: { getCoveredDates: vi.fn(), saveCandles: vi.fn(), findCandlesInRange: vi.fn() },
+    portfolioProvider: { portfolio: { cashBalance: 10_000, position: null } },
     ...overrides,
   };
 }

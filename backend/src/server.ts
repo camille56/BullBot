@@ -40,26 +40,27 @@ const LIVE_SESSION_CONFIG: LiveTradingSessionConfig = {
 function main(): void {
   const prisma = createPrismaClient();
 
+  const wsClient = new WebsocketClient({});
+  const marketDataProvider = new BinanceMarketDataProvider(wsClient, 'BTCUSDT', '1m');
+  const liveSession = new LiveTradingSession(marketDataProvider, LIVE_SESSION_CONFIG, (event) => {
+    broadcaster.broadcast({ type: 'TRADE_EVENT', event });
+  });
+
   const app = createApp({
     tradeRepository: new PrismaTradeRepository(prisma),
     backtestRunRepository: new PrismaBacktestRunRepository(prisma),
     strategyRepository: new PrismaStrategyRepository(prisma),
     candleRepository: new PrismaCandleRepository(prisma),
+    portfolioProvider: liveSession,
   });
 
   const httpServer = http.createServer(app);
   const broadcaster = new WebSocketBroadcaster({ server: httpServer });
 
-  const wsClient = new WebsocketClient({});
-  const marketDataProvider = new BinanceMarketDataProvider(wsClient, 'BTCUSDT', '1m');
-
   marketDataProvider.onPrice((candle) => {
     broadcaster.broadcast({ type: 'PRICE', price: candle.close, timestamp: candle.timestamp });
   });
 
-  const liveSession = new LiveTradingSession(marketDataProvider, LIVE_SESSION_CONFIG, (event) => {
-    broadcaster.broadcast({ type: 'TRADE_EVENT', event });
-  });
   liveSession.start();
   marketDataProvider.subscribe();
 
