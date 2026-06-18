@@ -2,7 +2,7 @@ import type { Trade } from '../api/client';
 
 export function TradeHistory({ trades }: { trades: Trade[] }) {
   if (trades.length === 0) {
-    return <p>Aucun trade pour le moment</p>;
+    return <p data-testid="trade-history-empty">Aucun trade pour le moment</p>;
   }
 
   return (
